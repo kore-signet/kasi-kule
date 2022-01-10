@@ -2,6 +2,20 @@
 name = "kasi-kule"
 version = "0.1.0"
 edition = "2021"
+license-file = "LICENSE"
+description = "An implementation of CIECAM02 color spaces in Rust"
+repository = "https://github.com/alisww/kasi-kule"
+keywords = ["color", "colorimetry", "color_difference", "color_spaces"]
+categories = ["computer-vision", "science"]
 
 [dependencies]
-lazy_static = "1.4.0"
+lazy_static = "1"
+
+[dev-dependencies]
+criterion = "0.3"
+lab = "0.11"
+fastrand = "1.6.0"
+
+[[bench]]
+name = "color_conversion"
+harness = false

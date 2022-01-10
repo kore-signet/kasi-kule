@@ -1,9 +1,10 @@
 #![allow(non_upper_case_globals)]
-
-use crate::{utils::*, HPE, LMS, XYZ};
+//! Constants for CAM02 and other CIE spaces.
+use crate::{utils::*, JabSpace, HPE, LMS, XYZ};
 use lazy_static::lazy_static;
 use std::f32::consts::PI;
 
+/// The standard D65 CIEXYZ illuminant.
 pub const D65_XYZ: XYZ = XYZ {
     x: 95.047,
     y: 100.0,
@@ -11,6 +12,7 @@ pub const D65_XYZ: XYZ = XYZ {
 };
 
 lazy_static! {
+    /// Transformation of the D65 CIEXYZ illuminant into CAM02 LMS
     pub static ref D65_LMS: LMS = LMS::from(&D65_XYZ);
 }
 
@@ -52,51 +54,59 @@ pub mod VC {
     }
 }
 
-pub mod UCS {
-    pub const k_l: f32 = 1.0;
-    pub const c1: f32 = 0.007;
-    pub const c2: f32 = 0.0228;
+/// Jab transformation coefficients optimized for Large Color Differences.
+pub struct LCD;
+impl JabSpace for LCD {
+    #[inline(always)]
+    fn k_l() -> f32 {
+        0.77
+    }
+
+    #[inline(always)]
+    fn c1() -> f32 {
+        0.007
+    }
+
+    #[inline(always)]
+    fn c2() -> f32 {
+        0.0053
+    }
 }
 
-// // ciecam02 viewing conditions
-// #[derive(Debug, Copy, Clone)]
-// pub struct CIECAM02_VC {
-//     D65_XYZ: XYZ,
-//     D65_LMS: LMS,
-//     la: f32,
-//     yb: f32,
-//     f: f32,
-//     c: f32,
-//     nc: f32,
-//     n: f32,
-//     z: f32,
-//     fl: f32,
-//     nbb: f32,
-//     ncb: f32,
-//     d: f32,
-//     achromatic_response_to_white: f32,
-// }
+/// Jab transformation coefficients optimized for Short Color Differences.
+pub struct SCD;
+impl JabSpace for SCD {
+    #[inline(always)]
+    fn k_l() -> f32 {
+        1.24
+    }
 
-// impl CIECAM02_VC {
-//     pub fn new() -> CIECAM02_VC {
-//         let D65_XYZ =
-// let D65_LMS = xyz_to_cat02(&D65_XYZ);
+    #[inline(always)]
+    fn c1() -> f32 {
+        0.007
+    }
 
-//         CIECAM02_VC {
-//             D65_XYZ,
-//             D65_LMS,
-//             la,
-//             yb,
-//             f,
-//             c,
-//             nc,
-//             z,
-//             fl,
-//             nbb,
-//             ncb,
-//             d,
-//             achromatic_response_to_white,
-//             n,
-//         }
-//     }
-// }
+    #[inline(always)]
+    fn c2() -> f32 {
+        0.0363
+    }
+}
+
+/// Jab transformations to create an approximately perceptually uniform color space.
+pub struct UCS;
+impl JabSpace for UCS {
+    #[inline(always)]
+    fn k_l() -> f32 {
+        1.0
+    }
+
+    #[inline(always)]
+    fn c1() -> f32 {
+        0.007
+    }
+
+    #[inline(always)]
+    fn c2() -> f32 {
+        0.0228
+    }
+}

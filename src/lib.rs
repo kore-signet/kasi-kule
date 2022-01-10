@@ -1,12 +1,20 @@
 #![allow(non_snake_case)]
 #![allow(non_camel_case_types)]
 
+//! kasi-kule is a small rust implementation of the [CIECAM02 color space](https://en.wikipedia.org/wiki/CIECAM02) and conversion to it from standard RGB.
+//! It is based on the [d3-cam02](https://github.com/connorgr/d3-cam02/) and [colorspacious](https://github.com/njsmith/colorspacious).
+//!
+//! The name, kasi-kule, is a translation of 'flower' into toki pona - literally, 'colorful plant'.
+//! o sitelen pona!
 use std::f32::consts::PI;
+use std::marker::PhantomData;
 pub mod consts;
 pub(crate) mod utils;
-use consts::{UCS, VC};
+use consts::VC;
+pub use consts::{LCD, SCD, UCS};
 use utils::*;
 
+/// sRGB color, in the 0-255 range.
 #[derive(Default, Debug, Copy, Clone)]
 pub struct sRGB {
     pub r: u8,
@@ -34,6 +42,7 @@ impl From<(u8, u8, u8)> for sRGB {
     }
 }
 
+/// Linearized RGB, scaled from sRGB
 #[derive(Default, Debug, Copy, Clone)]
 pub struct LinearRGB {
     pub r: f32,
@@ -57,6 +66,7 @@ impl<T: Into<sRGB>> From<T> for LinearRGB {
     }
 }
 
+/// CIEXYZ 1931 Color space, in the 0-100 range.
 #[derive(Debug, Copy, Clone)]
 pub struct XYZ {
     pub x: f32,
@@ -80,6 +90,7 @@ impl<T: Into<sRGB>> From<T> for XYZ {
     }
 }
 
+/// Long-Medium-Short color space, derived from XYZ using the Mcat02 matrix.
 #[derive(Debug, Copy, Clone)]
 pub struct LMS {
     pub l: f32,
@@ -103,6 +114,7 @@ impl<T: Into<sRGB>> From<T> for LMS {
     }
 }
 
+/// Hunt-Pointer-Estevez space, derived from CAM02 LMS.
 #[derive(Debug, Copy, Clone)]
 pub struct HPE {
     pub lh: f32,
@@ -126,6 +138,7 @@ impl<T: Into<sRGB>> From<T> for HPE {
     }
 }
 
+/// The CIECAM02 JCh (Lightness, Chroma, Hue) color space, derived from LMS.
 #[derive(Default, Debug, Copy, Clone)]
 pub struct JCh {
     pub J: f32,
@@ -223,68 +236,82 @@ impl<T: Into<sRGB>> From<T> for JCh {
     }
 }
 
+/// the JabSpace defines constants for transformation from JCh space into JabSpace. Used for type-checking comparisons between Jab colors.
+pub trait JabSpace {
+    fn k_l() -> f32;
+    fn c1() -> f32;
+    fn c2() -> f32;
+}
+
+/// The CAM02 Jab color appearance model.
+/// It can be transformed from JCh space into an approximately perceptually uniform space (UCS), or into a space optimized for either LCD (Large Color Differences) or SCD (Small Color Differences).
+/// Subsequent calculations of color difference must be between colors within the same space (UCS/LCD/SCD).
 #[derive(Default, Debug, Copy, Clone)]
-pub struct Jab {
+pub struct Jab<S: JabSpace> {
     pub J: f32,
     pub a: f32,
     pub b: f32,
+    space: PhantomData<S>,
 }
 
-impl From<&JCh> for Jab {
-    fn from(cam02: &JCh) -> Jab {
-        let j_prime = ((1.0 + 100.0 * UCS::c1) * cam02.J) / (1.0 + UCS::c1 * cam02.J) / UCS::k_l;
+impl<S: JabSpace> From<&JCh> for Jab<S> {
+    fn from(cam02: &JCh) -> Jab<S> {
+        let j_prime = ((1.0 + 100.0 * S::c1()) * cam02.J) / (1.0 + S::c1() * cam02.J) / S::k_l();
 
-        let m_prime = (1.0 / UCS::c2) * (1.0 + UCS::c2 * cam02.M).ln();
+        let m_prime = (1.0 / S::c2()) * (1.0 + S::c2() * cam02.M).ln();
 
         Jab {
             J: j_prime,
             a: m_prime * ((PI / 180.0) * cam02.h).cos(),
             b: m_prime * ((PI / 180.0) * cam02.h).sin(),
+            space: PhantomData,
         }
     }
 }
 
-impl<T: Into<sRGB>> From<T> for Jab {
-    fn from(rgb: T) -> Jab {
-        Jab::from(&JCh::from(&LMS::from(&XYZ::from(&LinearRGB::from(
+impl<T: Into<sRGB>, S: JabSpace> From<T> for Jab<S> {
+    fn from(rgb: T) -> Jab<S> {
+        Jab::<S>::from(&JCh::from(&LMS::from(&XYZ::from(&LinearRGB::from(
             &rgb.into(),
         )))))
     }
 }
 
-impl From<[f32; 3]> for Jab {
-    fn from(jab: [f32; 3]) -> Jab {
+impl<S: JabSpace> From<[f32; 3]> for Jab<S> {
+    fn from(jab: [f32; 3]) -> Jab<S> {
         Jab {
             J: jab[0],
             a: jab[1],
             b: jab[2],
+            space: PhantomData,
         }
     }
 }
 
-impl From<(f32, f32, f32)> for Jab {
-    fn from(jab: (f32, f32, f32)) -> Jab {
+impl<S: JabSpace> From<(f32, f32, f32)> for Jab<S> {
+    fn from(jab: (f32, f32, f32)) -> Jab<S> {
         Jab {
             J: jab.0,
             a: jab.1,
             b: jab.2,
+            space: PhantomData,
         }
     }
 }
 
-impl Jab {
-    pub fn squared_difference(&self, other: &Jab) -> f32 {
+impl<S: JabSpace> Jab<S> {
+    pub fn squared_difference(&self, other: &Jab<S>) -> f32 {
         let diff_j = (self.J - other.J).abs();
         let diff_a = (self.a - other.a).abs();
         let diff_b = (self.b - other.b).abs();
 
-        (diff_j / UCS::k_l).powi(2) + diff_a.powi(2) + diff_b.powi(2)
+        (diff_j / S::k_l()).powi(2) + diff_a.powi(2) + diff_b.powi(2)
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::{JCh, Jab};
+    use crate::{consts::UCS, JCh, Jab};
 
     macro_rules! float_eq {
         ($lhs:expr, $rhs:expr) => {
@@ -311,18 +338,18 @@ mod tests {
 
     #[test]
     fn jab_channels() {
-        float_eq!(Jab::from([0, 0, 0]).J, "0.00");
-        float_eq!(Jab::from([50, 50, 50]).J, "22.96");
-        float_eq!(Jab::from([150, 150, 150]).J, "64.89");
-        let white = Jab::from([255, 255, 255]);
+        float_eq!(Jab::<UCS>::from([0, 0, 0]).J, "0.00");
+        float_eq!(Jab::<UCS>::from([50, 50, 50]).J, "22.96");
+        float_eq!(Jab::<UCS>::from([150, 150, 150]).J, "64.89");
+        let white = Jab::<UCS>::from([255, 255, 255]);
         float_eq!(white.J, "100.00");
         float_eq!(white.a, "-1.91");
         float_eq!(white.b, "-1.15");
-        let red = Jab::from([255, 0, 0]);
+        let red = Jab::<UCS>::from([255, 0, 0]);
         float_eq!(red.J, "60.05");
         float_eq!(red.a, "38.69");
         float_eq!(red.b, "24.32");
-        let blue = Jab::from([0, 0, 255]);
+        let blue = Jab::<UCS>::from([0, 0, 255]);
         float_eq!(blue.J, "31.22");
         float_eq!(blue.a, "-8.38");
         float_eq!(blue.b, "-39.16");
