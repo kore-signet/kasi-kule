@@ -24,5 +24,5 @@ pub(crate) fn inverse_nonlinear_adaptation(cone_response: f32, fl: f32) -> f32 {
 }
 
 pub(crate) fn c_transform(cone: f32, d65_cone: f32) -> f32 {
-    cone * (((consts::D65_XYZ.y * *VC::d) / d65_cone) + (1.0f32 - *VC::d))
+    cone * (((consts::D65_XYZ.y * VC::d) / d65_cone) + (1.0f32 - VC::d))
 }

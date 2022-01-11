@@ -165,9 +165,9 @@ impl From<&LMS> for JCh {
         });
 
         let (lpa, mpa, spa) = (
-            nonlinear_adaptation(hpe_transforms.lh, *VC::fl),
-            nonlinear_adaptation(hpe_transforms.mh, *VC::fl),
-            nonlinear_adaptation(hpe_transforms.sh, *VC::fl),
+            nonlinear_adaptation(hpe_transforms.lh, VC::fl),
+            nonlinear_adaptation(hpe_transforms.mh, VC::fl),
+            nonlinear_adaptation(hpe_transforms.sh, VC::fl),
         );
 
         let ca = lpa - ((12.0 * mpa) / 11.0) + (spa / 11.0);
@@ -206,11 +206,11 @@ impl From<&LMS> for JCh {
 
         result_color.H = H;
 
-        let a = (2.0 * lpa + mpa + 0.05 * spa - 0.305) * *VC::nbb;
-        result_color.J = 100.0 * (a / *VC::achromatic_response_to_white).powf(VC::c * *VC::z);
+        let a = (2.0 * lpa + mpa + 0.05 * spa - 0.305) * VC::nbb;
+        result_color.J = 100.0 * (a / VC::achromatic_response_to_white).powf(VC::c * VC::z);
 
         let et = 0.25 * (((result_color.h * PI) / 180.0 + 2.0).cos() + 3.8);
-        let t = (50000.0 / 13.0) * VC::nc * *VC::ncb * et * (ca.powi(2) + cb.powi(2)).sqrt()
+        let t = (50000.0 / 13.0) * VC::nc * VC::ncb * et * (ca.powi(2) + cb.powi(2)).sqrt()
             / (lpa + mpa + (21.0 / 20.0) * spa);
 
         result_color.C = t.powf(0.9f32)
@@ -219,7 +219,7 @@ impl From<&LMS> for JCh {
 
         result_color.Q = (4.0 / VC::c)
             * (result_color.J / 100.0).sqrt()
-            * (*VC::achromatic_response_to_white + 4.0f32)
+            * (VC::achromatic_response_to_white + 4.0f32)
             * VC::fl.powf(0.25f32);
 
         result_color.M = result_color.C * VC::fl.powf(0.25f32);

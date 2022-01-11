@@ -8,9 +8,6 @@ repository = "https://github.com/alisww/kasi-kule"
 keywords = ["color", "colorimetry", "color_difference", "color_spaces"]
 categories = ["computer-vision", "science"]
 
-[dependencies]
-lazy_static = "1"
-
 [dev-dependencies]
 criterion = "0.3"
 lab = "0.11"
