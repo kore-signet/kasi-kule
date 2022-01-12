@@ -10,7 +10,7 @@
 use std::f32::consts::PI;
 use std::marker::PhantomData;
 pub mod consts;
-pub(crate) mod utils;
+pub mod utils;
 use consts::VC;
 pub use consts::{LCD, SCD, UCS};
 use utils::*;
@@ -53,10 +53,13 @@ pub struct LinearRGB {
 
 impl From<&sRGB> for LinearRGB {
     fn from(srgb: &sRGB) -> LinearRGB {
-        LinearRGB {
-            r: linearize_channel(srgb.r),
-            g: linearize_channel(srgb.g),
-            b: linearize_channel(srgb.b),
+        // safety: bounds checked by type; array is u8::MAX-sized and indexes are u8s
+        unsafe {
+            LinearRGB {
+                r: *consts::sRGB_LOOKUP.get_unchecked(srgb.r as usize),
+                g: *consts::sRGB_LOOKUP.get_unchecked(srgb.g as usize),
+                b: *consts::sRGB_LOOKUP.get_unchecked(srgb.b as usize),
+            }
         }
     }
 }
@@ -153,11 +156,7 @@ pub struct JCh {
 
 impl From<&LMS> for JCh {
     fn from(lms: &LMS) -> JCh {
-        let (lc, mc, sc) = (
-            c_transform(lms.l, consts::D65_LMS.l),
-            c_transform(lms.m, consts::D65_LMS.m),
-            c_transform(lms.s, consts::D65_LMS.s),
-        );
+        let [lc, mc, sc, _] = transform_cones([lms.l, lms.m, lms.s, 0.0]);
 
         let hpe_transforms = HPE::from(&LMS {
             l: lc,

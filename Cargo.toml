@@ -1,6 +1,6 @@
 [package]
 name = "kasi-kule"
-version = "0.3.0"
+version = "0.3.1"
 edition = "2021"
 license-file = "LICENSE"
 description = "An implementation of CIECAM02 color spaces in Rust"
@@ -15,4 +15,8 @@ fastrand = "1.6.0"
 
 [[bench]]
 name = "color_conversion"
+harness = false
+
+[[bench]]
+name = "cones_transform"
 harness = false
