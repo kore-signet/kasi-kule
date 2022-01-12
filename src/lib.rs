@@ -1,5 +1,6 @@
 #![allow(non_snake_case)]
 #![allow(non_camel_case_types)]
+#![allow(non_upper_case_globals)]
 
 //! kasi-kule is a small rust implementation of the [CIECAM02 color space](https://en.wikipedia.org/wiki/CIECAM02) and conversion to it from standard RGB.
 //! It is based on the [d3-cam02](https://github.com/connorgr/d3-cam02/) and [colorspacious](https://github.com/njsmith/colorspacious).
@@ -238,9 +239,9 @@ impl<T: Into<sRGB>> From<T> for JCh {
 
 /// the JabSpace defines constants for transformation from JCh space into JabSpace. Used for type-checking comparisons between Jab colors.
 pub trait JabSpace {
-    fn k_l() -> f32;
-    fn c1() -> f32;
-    fn c2() -> f32;
+    const k_l: f32;
+    const c1: f32;
+    const c2: f32;
 }
 
 /// The CAM02 Jab color appearance model.
@@ -256,9 +257,9 @@ pub struct Jab<S: JabSpace> {
 
 impl<S: JabSpace> From<&JCh> for Jab<S> {
     fn from(cam02: &JCh) -> Jab<S> {
-        let j_prime = ((1.0 + 100.0 * S::c1()) * cam02.J) / (1.0 + S::c1() * cam02.J) / S::k_l();
+        let j_prime = ((1.0 + 100.0 * S::c1) * cam02.J) / (1.0 + S::c1 * cam02.J) / S::k_l;
 
-        let m_prime = (1.0 / S::c2()) * (1.0 + S::c2() * cam02.M).ln();
+        let m_prime = (1.0 / S::c2) * (1.0 + S::c2 * cam02.M).ln();
 
         Jab {
             J: j_prime,
@@ -305,7 +306,7 @@ impl<S: JabSpace> Jab<S> {
         let diff_a = (self.a - other.a).abs();
         let diff_b = (self.b - other.b).abs();
 
-        (diff_j / S::k_l()).powi(2) + diff_a.powi(2) + diff_b.powi(2)
+        (diff_j / S::k_l).powi(2) + diff_a.powi(2) + diff_b.powi(2)
     }
 }
 

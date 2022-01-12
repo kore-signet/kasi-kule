@@ -67,56 +67,23 @@ pub mod VC {
 /// Jab transformation coefficients optimized for Large Color Differences.
 pub struct LCD;
 impl JabSpace for LCD {
-    #[inline(always)]
-    fn k_l() -> f32 {
-        0.77
-    }
-
-    #[inline(always)]
-    fn c1() -> f32 {
-        0.007
-    }
-
-    #[inline(always)]
-    fn c2() -> f32 {
-        0.0053
-    }
+    const k_l: f32 = 0.77;
+    const c1: f32 = 0.007;
+    const c2: f32 = 0.0053;
 }
 
 /// Jab transformation coefficients optimized for Short Color Differences.
 pub struct SCD;
 impl JabSpace for SCD {
-    #[inline(always)]
-    fn k_l() -> f32 {
-        1.24
-    }
-
-    #[inline(always)]
-    fn c1() -> f32 {
-        0.007
-    }
-
-    #[inline(always)]
-    fn c2() -> f32 {
-        0.0363
-    }
+    const k_l: f32 = 1.24;
+    const c1: f32 = 0.007;
+    const c2: f32 = 0.0363;
 }
 
 /// Jab transformations to create an approximately perceptually uniform color space.
 pub struct UCS;
 impl JabSpace for UCS {
-    #[inline(always)]
-    fn k_l() -> f32 {
-        1.0
-    }
-
-    #[inline(always)]
-    fn c1() -> f32 {
-        0.007
-    }
-
-    #[inline(always)]
-    fn c2() -> f32 {
-        0.0228
-    }
+    const k_l: f32 = 1.0;
+    const c1: f32 = 0.007;
+    const c2: f32 = 0.0228;
 }
