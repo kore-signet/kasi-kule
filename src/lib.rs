@@ -14,9 +14,12 @@ pub mod utils;
 use consts::VC;
 pub use consts::{LCD, SCD, UCS};
 use utils::*;
-
 #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
 pub mod sse;
+
+#[cfg(feature = "approximates")]
+#[allow(unused_imports)]
+use micromath::F32Ext;
 
 /// sRGB color, in the 0-255 range.
 #[derive(Default, Debug, Copy, Clone)]
@@ -209,10 +212,9 @@ impl From<&LMS> for JCh {
             s: sc,
         });
 
-        let (lpa, mpa, spa) = (
-            nonlinear_adaptation(hpe_transforms.lh, VC::fl),
-            nonlinear_adaptation(hpe_transforms.mh, VC::fl),
-            nonlinear_adaptation(hpe_transforms.sh, VC::fl),
+        let [lpa, mpa, spa, _] = nonlinear_adaptation(
+            [hpe_transforms.lh, hpe_transforms.mh, hpe_transforms.sh, 0.0],
+            VC::fl,
         );
 
         let ca = lpa - ((12.0 * mpa) / 11.0) + (spa / 11.0);
