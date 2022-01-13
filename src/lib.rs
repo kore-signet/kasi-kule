@@ -15,6 +15,9 @@ use consts::VC;
 pub use consts::{LCD, SCD, UCS};
 use utils::*;
 
+#[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
+pub mod sse;
+
 /// sRGB color, in the 0-255 range.
 #[derive(Default, Debug, Copy, Clone)]
 pub struct sRGB {
@@ -80,6 +83,20 @@ pub struct XYZ {
 
 impl From<&LinearRGB> for XYZ {
     fn from(rgb: &LinearRGB) -> XYZ {
+        #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
+        {
+            unsafe {
+                if is_x86_feature_detected!("sse") {
+                    let res = sse::sse_xyz(rgb);
+                    return XYZ {
+                        x: res[0],
+                        y: res[1],
+                        z: res[2],
+                    };
+                }
+            }
+        }
+
         XYZ {
             x: ((rgb.r * 0.4124) + (rgb.g * 0.3576) + (rgb.b * 0.1805)) * 100.0,
             y: ((rgb.r * 0.2126) + (rgb.g * 0.7152) + (rgb.b * 0.0722)) * 100.0,
@@ -104,6 +121,20 @@ pub struct LMS {
 
 impl From<&XYZ> for LMS {
     fn from(xyz: &XYZ) -> LMS {
+        #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
+        {
+            unsafe {
+                if is_x86_feature_detected!("sse") {
+                    let res = sse::sse_lms(xyz);
+                    return LMS {
+                        l: res[0],
+                        m: res[1],
+                        s: res[2],
+                    };
+                }
+            }
+        }
+
         LMS {
             l: (0.7328 * xyz.x) + (0.4296 * xyz.y) - (0.1624 * xyz.z),
             m: (-0.7036 * xyz.x) + (1.6975 * xyz.y) + (0.0061 * xyz.z),
@@ -128,6 +159,20 @@ pub struct HPE {
 
 impl From<&LMS> for HPE {
     fn from(lms: &LMS) -> HPE {
+        #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
+        {
+            unsafe {
+                if is_x86_feature_detected!("sse") {
+                    let res = sse::sse_hpe(lms);
+                    return HPE {
+                        lh: res[0],
+                        mh: res[1],
+                        sh: res[2],
+                    };
+                }
+            }
+        }
+
         HPE {
             lh: (0.7409792 * lms.l) + (0.2180250 * lms.m) + (0.0410058 * lms.s),
             mh: (0.2853532 * lms.l) + (0.6242014 * lms.m) + (0.0904454 * lms.s),

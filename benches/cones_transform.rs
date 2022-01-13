@@ -1,5 +1,5 @@
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
-use kasi_kule::{consts, utils, LMS};
+use kasi_kule::{consts, sse, utils, LMS};
 
 fn transform_scalar(v: [f32; 4]) -> [f32; 4] {
     [
@@ -20,7 +20,7 @@ fn cones_transform(c: &mut Criterion) {
     let lms = [lms.l, lms.m, lms.s, 0.0];
     group.bench_function("scalar", |b| b.iter(|| black_box(transform_scalar(lms))));
     group.bench_function("sse", |b| {
-        b.iter(|| black_box(unsafe { utils::transform_cones_sse(lms) }))
+        b.iter(|| black_box(unsafe { sse::transform_cones_sse(lms) }))
     });
     group.finish();
 }
