@@ -2,7 +2,7 @@
 
 use crate::consts::{self, VC};
 
-#[cfg(feature = "approximates")]
+#[cfg(feature = "approximate_math")]
 #[allow(unused_imports)]
 use micromath::F32Ext;
 

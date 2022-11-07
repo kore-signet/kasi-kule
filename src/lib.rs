@@ -14,10 +14,10 @@ pub mod utils;
 use consts::VC;
 pub use consts::{LCD, SCD, UCS};
 use utils::*;
-#[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
+#[cfg(all(feature = "sse", any(target_arch = "x86", target_arch = "x86_64")))]
 pub mod sse;
 
-#[cfg(feature = "approximates")]
+#[cfg(feature = "approximate_math")]
 #[allow(unused_imports)]
 use micromath::F32Ext;
 
@@ -86,7 +86,7 @@ pub struct XYZ {
 
 impl From<&LinearRGB> for XYZ {
     fn from(rgb: &LinearRGB) -> XYZ {
-        #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
+        #[cfg(all(feature = "sse",any(target_arch = "x86", target_arch = "x86_64")))]
         {
             unsafe {
                 if is_x86_feature_detected!("sse") {
@@ -124,7 +124,7 @@ pub struct LMS {
 
 impl From<&XYZ> for LMS {
     fn from(xyz: &XYZ) -> LMS {
-        #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
+        #[cfg(all(feature = "sse",any(target_arch = "x86", target_arch = "x86_64")))]
         {
             unsafe {
                 if is_x86_feature_detected!("sse") {
@@ -162,7 +162,7 @@ pub struct HPE {
 
 impl From<&LMS> for HPE {
     fn from(lms: &LMS) -> HPE {
-        #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
+        #[cfg(all(feature = "sse",any(target_arch = "x86", target_arch = "x86_64")))]
         {
             unsafe {
                 if is_x86_feature_detected!("sse") {
