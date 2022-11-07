@@ -71,7 +71,7 @@ pub unsafe fn sse_transform_cones(cones: [f32; 4]) -> [f32; 4] {
     use std::arch::x86_64::*;
 
     std::mem::transmute::<__m128, [f32; 4]>(_mm_mul_ps(
-        _mm_load_ps(cones[..].as_ptr()),
+        _mm_loadu_ps(cones[..].as_ptr()),
         _mm_add_ps(
             _mm_div_ps(
                 _mm_set1_ps(consts::D65_XYZ.y * VC::d),
