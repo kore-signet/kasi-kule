@@ -2,9 +2,8 @@
 
 use crate::consts::{self, VC};
 
-#[cfg(feature = "approximates")]
-#[allow(unused_imports)]
-use micromath::F32Ext;
+use cuda_std::GpuFloat;
+
 
 pub fn linearize_channel(c: u8) -> f32 {
     let c = c as f32 / 255.0;

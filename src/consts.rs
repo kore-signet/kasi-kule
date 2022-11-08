@@ -2,8 +2,11 @@
 //! Constants for CAM02 and other CIE spaces.
 use crate::{JabSpace, LMS, XYZ};
 
+use cuda_std::GpuFloat;
+
+
 const unsafe fn float_from_bits(v: u32) -> f32 {
-    std::mem::transmute::<u32, f32>(u32::from_be(v))
+    core::mem::transmute::<u32, f32>(u32::from_be(v))
 }
 
 /// The standard D65 CIEXYZ illuminant.
@@ -26,7 +29,7 @@ pub const D65_LMS: LMS = unsafe {
 /// CIECAM02 viewing conditions
 pub mod VC {
     use super::{float_from_bits, D65_XYZ};
-    use std::f32::consts::PI;
+    use core::f32::consts::PI;
 
     pub const la: f32 = (64.0 / PI) / 5.0;
     pub const yb: f32 = 20.0;
@@ -78,6 +81,10 @@ impl JabSpace for LCD {
     const k_l: f32 = 0.77;
     const c1: f32 = 0.007;
     const c2: f32 = 0.0053;
+
+    fn name() -> &'static str {
+        "LCD"
+    }
 }
 
 /// Jab transformation coefficients optimized for Short Color Differences.
@@ -86,6 +93,10 @@ impl JabSpace for SCD {
     const k_l: f32 = 1.24;
     const c1: f32 = 0.007;
     const c2: f32 = 0.0363;
+
+    fn name() -> &'static str {
+        "SCD"
+    }
 }
 
 /// Jab transformations to create an approximately perceptually uniform color space.
@@ -94,6 +105,10 @@ impl JabSpace for UCS {
     const k_l: f32 = 1.0;
     const c1: f32 = 0.007;
     const c2: f32 = 0.0228;
+
+    fn name() -> &'static str {
+        "UCS"
+    }
 }
 
 /// pre-generated lookup table for sRGB -> linear rgb conversion.

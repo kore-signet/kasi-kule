@@ -2,24 +2,22 @@
 #![allow(non_camel_case_types)]
 #![allow(non_upper_case_globals)]
 
+#![no_std]
+
 //! kasi-kule is a small rust implementation of the [CIECAM02 color space](https://en.wikipedia.org/wiki/CIECAM02) and conversion to it from standard RGB.
 //! It is based on the [d3-cam02](https://github.com/connorgr/d3-cam02/) and [colorspacious](https://github.com/njsmith/colorspacious).
 //!
 //! The name, kasi-kule, is a translation of 'flower' into toki pona - literally, 'colorful plant'.
 //! o sitelen pona!
-use std::f32::consts::PI;
-use std::marker::PhantomData;
+use core::f32::consts::PI;
+use core::marker::PhantomData;
 pub mod consts;
 pub mod utils;
 use consts::VC;
 pub use consts::{LCD, SCD, UCS};
 use utils::*;
-#[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
-pub mod sse;
 
-#[cfg(feature = "approximates")]
-#[allow(unused_imports)]
-use micromath::F32Ext;
+use cuda_std::GpuFloat;
 
 /// sRGB color, in the 0-255 range.
 #[derive(Default, Debug, Copy, Clone)]
@@ -86,20 +84,6 @@ pub struct XYZ {
 
 impl From<&LinearRGB> for XYZ {
     fn from(rgb: &LinearRGB) -> XYZ {
-        #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
-        {
-            unsafe {
-                if is_x86_feature_detected!("sse") {
-                    let res = sse::sse_xyz(rgb);
-                    return XYZ {
-                        x: res[0],
-                        y: res[1],
-                        z: res[2],
-                    };
-                }
-            }
-        }
-
         XYZ {
             x: ((rgb.r * 0.4124) + (rgb.g * 0.3576) + (rgb.b * 0.1805)) * 100.0,
             y: ((rgb.r * 0.2126) + (rgb.g * 0.7152) + (rgb.b * 0.0722)) * 100.0,
@@ -124,20 +108,6 @@ pub struct LMS {
 
 impl From<&XYZ> for LMS {
     fn from(xyz: &XYZ) -> LMS {
-        #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
-        {
-            unsafe {
-                if is_x86_feature_detected!("sse") {
-                    let res = sse::sse_lms(xyz);
-                    return LMS {
-                        l: res[0],
-                        m: res[1],
-                        s: res[2],
-                    };
-                }
-            }
-        }
-
         LMS {
             l: (0.7328 * xyz.x) + (0.4296 * xyz.y) - (0.1624 * xyz.z),
             m: (-0.7036 * xyz.x) + (1.6975 * xyz.y) + (0.0061 * xyz.z),
@@ -162,20 +132,6 @@ pub struct HPE {
 
 impl From<&LMS> for HPE {
     fn from(lms: &LMS) -> HPE {
-        #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
-        {
-            unsafe {
-                if is_x86_feature_detected!("sse") {
-                    let res = sse::sse_hpe(lms);
-                    return HPE {
-                        lh: res[0],
-                        mh: res[1],
-                        sh: res[2],
-                    };
-                }
-            }
-        }
-
         HPE {
             lh: (0.7409792 * lms.l) + (0.2180250 * lms.m) + (0.0410058 * lms.s),
             mh: (0.2853532 * lms.l) + (0.6242014 * lms.m) + (0.0904454 * lms.s),
@@ -288,17 +244,32 @@ pub trait JabSpace {
     const k_l: f32;
     const c1: f32;
     const c2: f32;
+
+    fn name() -> &'static str;
 }
 
 /// The CAM02 Jab color appearance model.
 /// It can be transformed from JCh space into an approximately perceptually uniform space (UCS), or into a space optimized for either LCD (Large Color Differences) or SCD (Small Color Differences).
 /// Subsequent calculations of color difference must be between colors within the same space (UCS/LCD/SCD).
-#[derive(Default, Debug, Copy, Clone)]
+#[derive(Default, Copy, Clone)]
 pub struct Jab<S: JabSpace> {
     pub J: f32,
     pub a: f32,
     pub b: f32,
-    space: PhantomData<S>,
+    pub space: PhantomData<S>,
+}
+
+use core::fmt;
+
+impl<S: JabSpace> fmt::Debug for Jab<S> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("Jab")
+         .field("J", &self.J)
+         .field("a", &self.a)
+         .field("b", &self.b)
+         .field("space", &S::name())
+         .finish()
+    }
 }
 
 impl<S: JabSpace> From<&JCh> for Jab<S> {
@@ -356,49 +327,49 @@ impl<S: JabSpace> Jab<S> {
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use crate::{consts::UCS, JCh, Jab};
+// #[cfg(test)]
+// mod tests {
+//     use crate::{consts::UCS, JCh, Jab};
 
-    macro_rules! float_eq {
-        ($lhs:expr, $rhs:expr) => {
-            assert_eq!(format!("{:.2}", $lhs), $rhs)
-        };
-    }
+//     macro_rules! float_eq {
+//         ($lhs:expr, $rhs:expr) => {
+//             assert_eq!(format!("{:.2}", $lhs), $rhs)
+//         };
+//     }
 
-    // based on https://github.com/connorgr/d3-cam02/blob/master/test/cam02-test.js,
-    #[test]
-    fn jch_channels() {
-        float_eq!(JCh::from([0, 0, 0]).J, "0.00");
-        float_eq!(JCh::from([50, 50, 50]).J, "14.92");
-        float_eq!(JCh::from([100, 100, 100]).J, "32.16");
-        float_eq!(JCh::from([150, 150, 150]).J, "52.09");
-        float_eq!(JCh::from([200, 200, 200]).J, "74.02");
-        float_eq!(JCh::from([250, 250, 250]).J, "97.57");
-        float_eq!(JCh::from([255, 255, 255]).J, "100.00");
+//     // based on https://github.com/connorgr/d3-cam02/blob/master/test/cam02-test.js,
+//     #[test]
+//     fn jch_channels() {
+//         float_eq!(JCh::from([0, 0, 0]).J, "0.00");
+//         float_eq!(JCh::from([50, 50, 50]).J, "14.92");
+//         float_eq!(JCh::from([100, 100, 100]).J, "32.16");
+//         float_eq!(JCh::from([150, 150, 150]).J, "52.09");
+//         float_eq!(JCh::from([200, 200, 200]).J, "74.02");
+//         float_eq!(JCh::from([250, 250, 250]).J, "97.57");
+//         float_eq!(JCh::from([255, 255, 255]).J, "100.00");
 
-        let red = JCh::from([255, 0, 0]);
-        float_eq!(red.J, "46.93");
-        float_eq!(red.C, "111.30");
-        float_eq!(red.h, "32.15");
-    }
+//         let red = JCh::from([255, 0, 0]);
+//         float_eq!(red.J, "46.93");
+//         float_eq!(red.C, "111.30");
+//         float_eq!(red.h, "32.15");
+//     }
 
-    #[test]
-    fn jab_channels() {
-        float_eq!(Jab::<UCS>::from([0, 0, 0]).J, "0.00");
-        float_eq!(Jab::<UCS>::from([50, 50, 50]).J, "22.96");
-        float_eq!(Jab::<UCS>::from([150, 150, 150]).J, "64.89");
-        let white = Jab::<UCS>::from([255, 255, 255]);
-        float_eq!(white.J, "100.00");
-        float_eq!(white.a, "-1.91");
-        float_eq!(white.b, "-1.15");
-        let red = Jab::<UCS>::from([255, 0, 0]);
-        float_eq!(red.J, "60.05");
-        float_eq!(red.a, "38.69");
-        float_eq!(red.b, "24.32");
-        let blue = Jab::<UCS>::from([0, 0, 255]);
-        float_eq!(blue.J, "31.22");
-        float_eq!(blue.a, "-8.38");
-        float_eq!(blue.b, "-39.16");
-    }
-}
+//     #[test]
+//     fn jab_channels() {
+//         float_eq!(Jab::<UCS>::from([0, 0, 0]).J, "0.00");
+//         float_eq!(Jab::<UCS>::from([50, 50, 50]).J, "22.96");
+//         float_eq!(Jab::<UCS>::from([150, 150, 150]).J, "64.89");
+//         let white = Jab::<UCS>::from([255, 255, 255]);
+//         float_eq!(white.J, "100.00");
+//         float_eq!(white.a, "-1.91");
+//         float_eq!(white.b, "-1.15");
+//         let red = Jab::<UCS>::from([255, 0, 0]);
+//         float_eq!(red.J, "60.05");
+//         float_eq!(red.a, "38.69");
+//         float_eq!(red.b, "24.32");
+//         let blue = Jab::<UCS>::from([0, 0, 255]);
+//         float_eq!(blue.J, "31.22");
+//         float_eq!(blue.a, "-8.38");
+//         float_eq!(blue.b, "-39.16");
+//     }
+// }
