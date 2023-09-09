@@ -301,6 +301,17 @@ pub struct Jab<S: JabSpace> {
     space: PhantomData<S>,
 }
 
+impl<S: JabSpace> Jab<S> {
+    pub const fn new_const(J: f32, a: f32, b: f32) -> Jab<S> {
+        Jab {
+            J,
+            a,
+            b,
+            space: PhantomData
+        }
+    }
+}
+
 impl<S: JabSpace> From<&JCh> for Jab<S> {
     fn from(cam02: &JCh) -> Jab<S> {
         let j_prime = ((1.0 + 100.0 * S::c1) * cam02.J) / (1.0 + S::c1 * cam02.J) / S::k_l;
