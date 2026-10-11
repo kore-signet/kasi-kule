@@ -73,7 +73,7 @@ pub mod VC {
 }
 
 /// Jab transformation coefficients optimized for Large Color Differences.
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Default)]
 pub struct LCD;
 impl JabSpace for LCD {
     const k_l: f32 = 0.77;
@@ -82,7 +82,7 @@ impl JabSpace for LCD {
 }
 
 /// Jab transformation coefficients optimized for Short Color Differences.
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Default)]
 pub struct SCD;
 impl JabSpace for SCD {
     const k_l: f32 = 1.24;
@@ -91,7 +91,7 @@ impl JabSpace for SCD {
 }
 
 /// Jab transformations to create an approximately perceptually uniform color space.
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Default)]
 pub struct UCS;
 impl JabSpace for UCS {
     const k_l: f32 = 1.0;
